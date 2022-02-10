@@ -9,7 +9,8 @@ Visualize the [ghosts in the machines](https://en.wikipedia.org/wiki/Ghost_in_th
 
 The goals for this project are to create a fun little way to visualize network traffic in a way that feels like having a lavalamp in your room.
 
-How it works:
+## Design
+
 Currently I have a rough idea of how I want this to work using both IPv6 and IPv4.
 
 IPv4:
