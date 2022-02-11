@@ -1,58 +1,33 @@
-use std::{thread, time};
+//! Example that definitely works on Raspberry Pi.
+//! Make sure you have "SPI" on your Pi enabled and that MOSI-Pin is connected
+//! with DIN-Pin of the LEDs. You just need DIN pin, no clock. WS2818 uses an one-wire-protocol.
+//! See the specification for details.
 
-use smart_leds::{SmartLedsWrite, RGB8};
-use ws281x_rpi::Ws2812Rpi;
+use ws2818_rgb_led_spi_driver::adapter_gen::WS28xxAdapter;
+use ws2818_rgb_led_spi_driver::adapter_spi::WS28xxSpiAdapter;
+use ws2818_rgb_led_spi_driver::encoding::encode_rgb;
 
 fn main() {
-    println!("Program start");
+    println!("make sure you have \"SPI\" on your Pi enabled and that MOSI-Pin is connected with DIN-Pin!");
+    let mut adapter = WS28xxSpiAdapter::new("/dev/spidev0.0").unwrap();
 
-    // GPIO Pin 10 is SPI
-    // Other modes and PINs are available depending on the Raspberry Pi revision
-    // Additional OS configuration might be needed for any mode.
-    // Check https://github.com/jgarff/rpi_ws281x for more information.
-    const PIN: i32 = 10;
-    const NUM_LEDS: usize = 25;
-    const DELAY: time::Duration = time::Duration::from_millis(1000);
-
-    let mut ws = Ws2812Rpi::new(NUM_LEDS as i32, PIN).unwrap();
-
-    let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
-    let empty: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
-
-    // Blink the LED's in a blue-green-red-white pattern.
-    for led in data.iter_mut().step_by(4) {
-        led.b = 32;
+    // Method 1: encode first and write in two step (preferred way; better performance)
+    {
+        let mut spi_encoded_rgb_bits = vec![];
+        // set first three pixels to bright red, bright green and bright blue
+        spi_encoded_rgb_bits.extend_from_slice(&encode_rgb(255, 0, 0));
+        spi_encoded_rgb_bits.extend_from_slice(&encode_rgb(0, 255, 0));
+        spi_encoded_rgb_bits.extend_from_slice(&encode_rgb(0, 0, 255));
+        adapter.write_encoded_rgb(&spi_encoded_rgb_bits).unwrap();
     }
 
-    if NUM_LEDS > 1 {
-        for led in data.iter_mut().skip(1).step_by(4) {
-            led.g = 32;
-        }
-    }
-
-    if NUM_LEDS > 2 {
-        for led in data.iter_mut().skip(2).step_by(4) {
-            led.r = 32;
-        }
-    }
-
-    if NUM_LEDS > 3 {
-        for led in data.iter_mut().skip(3).step_by(4) {
-            led.r = 32;
-            led.g = 32;
-            led.b = 32;
-        }
-    }
-
-    loop {
-        // On
-        println!("LEDS on");
-        ws.write(data.iter().cloned()).unwrap();
-        thread::sleep(DELAY);
-
-        // Off
-        println!("LEDS off");
-        ws.write(empty.iter().cloned()).unwrap();
-        thread::sleep(DELAY);
+    // Method 2: encode and write in one step
+    {
+        let mut rgb_values = vec![];
+        // set first three pixels to bright red, bright green and bright blue
+        rgb_values.push((255, 0, 0));
+        rgb_values.push((0, 255, 0));
+        rgb_values.push((0, 0, 255));
+        adapter.write_rgb(&rgb_values).unwrap();
     }
 }
